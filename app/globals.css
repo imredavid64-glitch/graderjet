@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 6% 7%;
+    --foreground: 210 20% 98%;
+    --card: 240 6% 9%;
+    --card-foreground: 210 20% 98%;
+    --popover: 240 6% 9%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 239 84% 62%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 5% 15%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 240 5% 14%;
+    --muted-foreground: 240 4% 55%;
+    --accent: 240 5% 16%;
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5% 15%;
+    --input: 240 5% 15%;
+    --ring: 239 84% 62%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html,
+  body {
+    height: 100%;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Thin, unobtrusive scrollbars for the dashboard feel */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border));
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Streaming caret */
+.streaming-caret::after {
+  content: "";
+  display: inline-block;
+  width: 0.5ch;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: hsl(var(--primary));
+  animation: caret-blink 0.8s steps(2, start) infinite;
+}
+@keyframes caret-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* Soft pulse for live tool-call cards */
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 hsla(var(--primary) / 0.35);
+  }
+  70% {
+    box-shadow: 0 0 0 6px hsla(var(--primary) / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 hsla(var(--primary) / 0);
+  }
+}
+.tool-live {
+  animation: pulse-ring 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
