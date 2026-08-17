@@ -54,6 +54,12 @@ identically.
 
 - **GitHub Actions** (`.github/workflows/ci.yml`) runs `npm run typecheck` and
   `npm run build` on every pull request (Node 24, npm cache).
+- **`.github/workflows/nightly-smoke.yml`** runs the real-model smoke test
+  against production every day at 03:00 UTC (and on manual `workflow_dispatch`)
+  — it loads the live site in Chrome, sends a prompt, and asserts a real,
+  non-mock reply with no fail-loud banners. Failing runs upload the screenshot
+  and log as artifacts. Note: on private repos, GitHub pauses scheduled
+  workflows after 60 days without repository activity.
 - **`main` is protected**: the `Typecheck & build` check must pass before
   merging, branches must be up to date (strict mode), and admins are included
   (`enforce_admins`). Force pushes and deletions are blocked.
