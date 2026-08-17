@@ -6,6 +6,7 @@ import {
   type UIMessage,
 } from "ai";
 import { openai } from "@ai-sdk/openai";
+import { checkOpenAIKey } from "@/lib/agent/openai-key";
 import { gradingTools } from "@/lib/agent/tools";
 import { buildMockScript, createMockModel } from "@/lib/agent/mock-model";
 import { RUBRIC } from "@/lib/mock-data";
@@ -34,11 +35,26 @@ state, briefly explain the reasoning so the teacher can audit your judgment.`;
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
 
-  // With an API key, grade with a real model. Without one, run the fully
-  // offline mock agent so the app still works out of the box.
-  const model = process.env.OPENAI_API_KEY
-    ? openai("gpt-4o-mini")
-    : createMockModel(buildMockScript(messages));
+  // The mock agent is used ONLY when no API key is configured. If a key is
+  // present it must be valid: fail loudly with a clear message instead of a
+  // cryptic mid-stream 401 (or silently serving the mock while configured for
+  // a real model).
+  const apiKey = process.env.OPENAI_API_KEY;
+
+  let model;
+  if (apiKey) {
+    const check = await checkOpenAIKey(apiKey);
+    if (!check.ok) {
+      console.error("[graderjet] " + check.message);
+      return new Response(check.message, {
+        status: check.status === 0 ? 502 : 500,
+        headers: { "content-type": "text/plain" },
+      });
+    }
+    model = openai("gpt-4o-mini");
+  } else {
+    model = createMockModel(buildMockScript(messages));
+  }
 
   const result = streamText({
     model,
