@@ -61,8 +61,16 @@ identically.
 
 All variables are optional because of the mock fallback:
 
-- `OPENAI_API_KEY` — when set, `/api/chat` grades with `gpt-4o-mini` via the
-  Vercel AI SDK instead of the scripted mock agent.
+- `OPENROUTER_API_KEY` — when set, `/api/chat` grades with `gpt-4o-mini` via
+  **OpenRouter** instead of the scripted mock agent. The key is validated
+  against OpenRouter on request; a rejected key makes the route fail loudly
+  with a clear error.
+- `OPENROUTER_MODEL` — OpenRouter model slug, defaults to `openai/gpt-4o-mini`.
+- `OPENAI_API_KEY` — alternative real-model path; when set, grades via OpenAI
+  directly (only used if `OPENROUTER_API_KEY` is not set).
+
+Any configured key is validated against its provider before use, and output
+is capped at 1024 tokens per reply.
 
 Set them in production with:
 

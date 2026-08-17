@@ -23,12 +23,16 @@ calls, live UI updates) works offline.
 
 ```bash
 cp .env.example .env.local
-# set OPENAI_API_KEY=sk-...
+# set OPENROUTER_API_KEY=sk-or-... or OPENAI_API_KEY=sk-...
 npm run dev
 ```
 
-When `OPENAI_API_KEY` is set, the agent grades with `gpt-4o-mini` and can adapt
-to arbitrary instructions instead of following the mock script.
+With a real key the agent grades with `gpt-4o-mini` — via **OpenRouter** when
+`OPENROUTER_API_KEY` is set (override the model with `OPENROUTER_MODEL`),
+otherwise via OpenAI — and can adapt to arbitrary instructions instead of
+following the mock script. If a configured key is rejected by its provider,
+the chat route fails loudly with a clear error rather than silently serving the
+mock.
 
 ## Deployment
 

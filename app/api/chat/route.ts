@@ -6,7 +6,8 @@ import {
   type UIMessage,
 } from "ai";
 import { openai } from "@ai-sdk/openai";
-import { checkOpenAIKey } from "@/lib/agent/openai-key";
+import { openrouter } from "@openrouter/ai-sdk-provider";
+import { checkApiKey, resolveApiKeyProvider } from "@/lib/agent/api-key";
 import { gradingTools } from "@/lib/agent/tools";
 import { buildMockScript, createMockModel } from "@/lib/agent/mock-model";
 import { RUBRIC } from "@/lib/mock-data";
@@ -39,11 +40,13 @@ export async function POST(req: Request) {
   // present it must be valid: fail loudly with a clear message instead of a
   // cryptic mid-stream 401 (or silently serving the mock while configured for
   // a real model).
-  const apiKey = process.env.OPENAI_API_KEY;
+  const { provider, apiKey } = resolveApiKeyProvider();
 
   let model;
-  if (apiKey) {
-    const check = await checkOpenAIKey(apiKey);
+  if (provider === "mock") {
+    model = createMockModel(buildMockScript(messages));
+  } else {
+    const check = await checkApiKey(provider, apiKey as string);
     if (!check.ok) {
       console.error("[graderjet] " + check.message);
       return new Response(check.message, {
@@ -51,9 +54,10 @@ export async function POST(req: Request) {
         headers: { "content-type": "text/plain" },
       });
     }
-    model = openai("gpt-4o-mini");
-  } else {
-    model = createMockModel(buildMockScript(messages));
+    model =
+      provider === "openrouter"
+        ? openrouter(process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini")
+        : openai("gpt-4o-mini");
   }
 
   const result = streamText({
@@ -61,6 +65,9 @@ export async function POST(req: Request) {
     system: SYSTEM_PROMPT,
     messages: await convertToModelMessages(messages),
     tools: gradingTools,
+    // Cap output tokens: grading replies are short, and a hard cap also keeps
+    // per-request cost bounded (some accounts run on small credit balances).
+    maxOutputTokens: 1024,
   });
 
   return createUIMessageStreamResponse({
