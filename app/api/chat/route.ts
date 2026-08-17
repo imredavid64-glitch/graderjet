@@ -6,6 +6,8 @@ import {
   type UIMessage,
 } from "ai";
 import { openai } from "@ai-sdk/openai";
+import { openrouter } from "@openrouter/ai-sdk-provider";
+import { checkApiKey, resolveApiKeyProvider } from "@/lib/agent/api-key";
 import { gradingTools } from "@/lib/agent/tools";
 import { buildMockScript, createMockModel } from "@/lib/agent/mock-model";
 import { RUBRIC } from "@/lib/mock-data";
@@ -34,17 +36,38 @@ state, briefly explain the reasoning so the teacher can audit your judgment.`;
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
 
-  // With an API key, grade with a real model. Without one, run the fully
-  // offline mock agent so the app still works out of the box.
-  const model = process.env.OPENAI_API_KEY
-    ? openai("gpt-4o-mini")
-    : createMockModel(buildMockScript(messages));
+  // The mock agent is used ONLY when no API key is configured. If a key is
+  // present it must be valid: fail loudly with a clear message instead of a
+  // cryptic mid-stream 401 (or silently serving the mock while configured for
+  // a real model).
+  const { provider, apiKey } = resolveApiKeyProvider();
+
+  let model;
+  if (provider === "mock") {
+    model = createMockModel(buildMockScript(messages));
+  } else {
+    const check = await checkApiKey(provider, apiKey as string);
+    if (!check.ok) {
+      console.error("[graderjet] " + check.message);
+      return new Response(check.message, {
+        status: check.status === 0 ? 502 : 500,
+        headers: { "content-type": "text/plain" },
+      });
+    }
+    model =
+      provider === "openrouter"
+        ? openrouter(process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini")
+        : openai("gpt-4o-mini");
+  }
 
   const result = streamText({
     model,
     system: SYSTEM_PROMPT,
     messages: await convertToModelMessages(messages),
     tools: gradingTools,
+    // Cap output tokens: grading replies are short, and a hard cap also keeps
+    // per-request cost bounded (some accounts run on small credit balances).
+    maxOutputTokens: 1024,
   });
 
   return createUIMessageStreamResponse({

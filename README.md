@@ -23,17 +23,22 @@ calls, live UI updates) works offline.
 
 ```bash
 cp .env.example .env.local
-# set OPENAI_API_KEY=sk-...
+# set OPENROUTER_API_KEY=sk-or-... or OPENAI_API_KEY=sk-...
 npm run dev
 ```
 
-When `OPENAI_API_KEY` is set, the agent grades with `gpt-4o-mini` and can adapt
-to arbitrary instructions instead of following the mock script.
+With a real key the agent grades with `gpt-4o-mini` — via **OpenRouter** when
+`OPENROUTER_API_KEY` is set (override the model with `OPENROUTER_MODEL`),
+otherwise via OpenAI — and can adapt to arbitrary instructions instead of
+following the mock script. If a configured key is rejected by its provider,
+the chat route fails loudly with a clear error rather than silently serving the
+mock.
 
 ## Deployment
 
-**Live at https://graderjet.vercel.app** (Vercel, no API key required — the
-production chat route uses the same mock fallback).
+**Live at https://graderjet.vercel.app** (Vercel). Production grades with
+`gpt-4o-mini` via **OpenRouter** (`OPENROUTER_API_KEY` is set there); the mock
+agent is only used when no API key is configured.
 
 ```bash
 vercel --prod --yes
@@ -76,6 +81,7 @@ components/             # top-nav, document-viewer, workbench, agent-dialogue,
                         # scorecard, activity-feed, tool-card, ui/*
 hooks/use-grading-workspace.ts  # chat -> UI state wiring
 lib/agent/tools.ts      # grading tools (update_scores, highlight_passage, curve)
+lib/agent/api-key.ts    # provider-aware API key guard (fail loud on bad keys)
 lib/agent/mock-model.ts # offline mock grading agent (scripted stream + tool calls)
 lib/                    # types, mock data, grading helpers
 scripts/verify-flow.mjs # Playwright end-to-end smoke test
@@ -91,3 +97,7 @@ npm run build
 PORT=3100 npm start &   # in one terminal
 node scripts/verify-flow.mjs   # expects http://localhost:3100
 ```
+
+The smoke test asserts the **mock agent's** scripted behavior, so run it with
+`OPENROUTER_API_KEY`/`OPENAI_API_KEY` unset (otherwise the real model replies
+won't match the expected script).
