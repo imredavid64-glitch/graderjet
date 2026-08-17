@@ -81,6 +81,7 @@ lib/                    # types, mock data, grading helpers
 scripts/verify-flow.mjs # Playwright end-to-end smoke test
 vercel.json             # pins the Vercel framework preset to Next.js
 docs/DEPLOYMENT.md      # Vercel deployment runbook
+.github/workflows/ci.yml # PR checks: typecheck + next build
 ```
 
 ## Verification
