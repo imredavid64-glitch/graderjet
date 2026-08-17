@@ -30,6 +30,22 @@ npm run dev
 When `OPENAI_API_KEY` is set, the agent grades with `gpt-4o-mini` and can adapt
 to arbitrary instructions instead of following the mock script.
 
+## Deployment
+
+**Live at https://graderjet.vercel.app** (Vercel, no API key required — the
+production chat route uses the same mock fallback).
+
+```bash
+vercel --prod --yes
+```
+
+The project is linked to Vercel (`.vercel/project.json`), connected to
+`github.com/imredavid64-glitch/graderjet`, and `vercel.json` pins the framework
+to Next.js so production builds read the `.next` output. Pushing to `main`
+auto-deploys to production; PRs get preview deployments. See
+**[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** for the full runbook: git
+deploys, environment variables, verification, and troubleshooting.
+
 ## How the agentic loop works
 
 1. `useChat` (Vercel AI SDK) streams the conversation from `/api/chat`.
@@ -59,9 +75,12 @@ app/
 components/             # top-nav, document-viewer, workbench, agent-dialogue,
                         # scorecard, activity-feed, tool-card, ui/*
 hooks/use-grading-workspace.ts  # chat -> UI state wiring
-lib/agent/              # grading tools + mock model provider
+lib/agent/tools.ts      # grading tools (update_scores, highlight_passage, curve)
+lib/agent/mock-model.ts # offline mock grading agent (scripted stream + tool calls)
 lib/                    # types, mock data, grading helpers
 scripts/verify-flow.mjs # Playwright end-to-end smoke test
+vercel.json             # pins the Vercel framework preset to Next.js
+docs/DEPLOYMENT.md      # Vercel deployment runbook
 ```
 
 ## Verification
