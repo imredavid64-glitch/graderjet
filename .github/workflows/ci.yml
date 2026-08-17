@@ -40,3 +40,5 @@ jobs:
         # next/font/google fetches font CSS from fonts.googleapis.com during
         # the build; if that request is briefly rate-limited, re-run the job.
         run: npm run build
+
+# Test PR marker: confirm this workflow runs typecheck and build on pull requests.
