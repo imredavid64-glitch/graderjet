@@ -1,0 +1,59 @@
+name: Nightly Production Smoke Test
+
+on:
+  schedule:
+    # 03:00 UTC daily (cron is in UTC; adjust to taste).
+    - cron: "0 3 * * *"
+  workflow_dispatch: # allow manual runs from the Actions tab
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Real-model smoke test (production)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run real-model smoke test against production
+        env:
+          BASE_URL: https://graderjet.vercel.app
+          REAL_MODEL: "1"
+        # The script launches Chrome (channel: chrome) and asserts the live
+        # agent streams a real, non-mock reply with no fail-loud banners.
+        # It exits non-zero on any failed check or browser error.
+        run: |
+          set -o pipefail
+          node scripts/verify-flow.mjs 2>&1 | tee /tmp/graderjet-final.log
+
+      - name: Upload screenshot on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-screenshot
+          path: /tmp/graderjet-final.png
+          if-no-files-found: ignore
+
+      - name: Upload test log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-log
+          path: /tmp/graderjet-final.log
+          if-no-files-found: ignore
