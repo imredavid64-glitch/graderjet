@@ -32,7 +32,13 @@ const PART_TYPES = new Set([
 ]);
 
 function isSupportedPartType(type: string): boolean {
-  return PART_TYPES.has(type) || type.startsWith("data-");
+  return (
+    PART_TYPES.has(type) ||
+    type.startsWith("data-") ||
+    // Tool parts are typed `tool-<toolName>` by the AI SDK (e.g.
+    // "tool-update_scores"), with input/output distinguished by state.
+    type.startsWith("tool-")
+  );
 }
 
 export type ChatMessagesResult =
@@ -103,28 +109,14 @@ export function parseChatMessages(body: unknown): ChatMessagesResult {
           error: `messages[${i}].parts[${j}].text must be a string.`,
         };
       }
-      if (
-        p.type === "tool-input" &&
-        (typeof p.toolCallId !== "string" ||
-          typeof p.input !== "object" ||
-          p.input === null)
-      ) {
+      // Tool parts always carry a toolCallId; input/output fields are
+      // state-dependent (input-available vs output-available), so only the id
+      // is required here.
+      if (p.type.startsWith("tool-") && typeof p.toolCallId !== "string") {
         return {
           ok: false,
           error:
-            `messages[${i}].parts[${j}] (tool-input) requires a string ` +
-            '"toolCallId" and an object "input".',
-        };
-      }
-      if (
-        p.type === "tool-output" &&
-        (typeof p.toolCallId !== "string" || !("output" in p))
-      ) {
-        return {
-          ok: false,
-          error:
-            `messages[${i}].parts[${j}] (tool-output) requires a string ` +
-            '"toolCallId" and an "output" field.',
+            `messages[${i}].parts[${j}] (${p.type}) requires a string "toolCallId".`,
         };
       }
     }
