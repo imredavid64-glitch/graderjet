@@ -16,8 +16,9 @@ test("accepts a valid UI-message payload (as sent by useChat)", () => {
         parts: [
           { type: "text", text: "Done." },
           {
-            type: "tool-input",
+            type: "tool-update_scores",
             toolCallId: "call_1",
+            state: "input-available",
             input: { category: "Thesis", new_score: 20, reasoning: "Good thesis." },
           },
         ],
@@ -27,8 +28,9 @@ test("accepts a valid UI-message payload (as sent by useChat)", () => {
         role: "user",
         parts: [
           {
-            type: "tool-output",
+            type: "tool-update_scores",
             toolCallId: "call_1",
+            state: "output-available",
             output: { ok: true },
           },
         ],
@@ -80,18 +82,66 @@ test("rejects a message with a malformed part", () => {
   assert.match(r.error ?? "", /\.text/);
 });
 
-test("rejects a tool-input part missing its input object", () => {
+test("rejects a tool part missing its toolCallId", () => {
   const r = parseChatMessages({
     messages: [
       {
         id: "m1",
         role: "assistant",
-        parts: [{ type: "tool-input", toolCallId: "c1" }],
+        parts: [{ type: "tool-update_scores", input: { category: "Thesis" } }],
       },
     ],
   });
   assert.ok(!r.ok);
-  assert.match(r.error ?? "", /tool-input/);
+  assert.match(r.error ?? "", /toolCallId/);
+});
+
+test("accepts a resubmitted message with step-start parts (post tool round)", () => {
+  // The AI SDK client re-submits the conversation after executing tool calls,
+  // and those messages include "step-start" boundary parts. Rejecting them
+  // broke the agent's acknowledgment round — this is the regression guard.
+  const r = parseChatMessages({
+    messages: [
+      { id: "m1", role: "user", parts: [{ type: "text", text: "Raise Thesis to 20." }] },
+      {
+        id: "m2",
+        role: "assistant",
+        parts: [
+          { type: "step-start" },
+          { type: "text", text: "Applying now…" },
+          {
+            type: "tool-update_scores",
+            toolCallId: "call-1",
+            state: "input-available",
+            input: { category: "Thesis", new_score: 20, reasoning: "Good thesis." },
+          },
+        ],
+      },
+      {
+        id: "m3",
+        role: "user",
+        parts: [
+          { type: "step-start" },
+          {
+            type: "tool-update_scores",
+            toolCallId: "call-1",
+            state: "output-available",
+            output: { ok: true },
+          },
+        ],
+      },
+    ],
+  });
+  assert.ok(r.ok);
+});
+
+test("accepts data-* dynamic part types", () => {
+  const r = parseChatMessages({
+    messages: [
+      { id: "m1", role: "user", parts: [{ type: "data-example", data: {} }] },
+    ],
+  });
+  assert.ok(r.ok);
 });
 
 test("rejects an unsupported part type", () => {
