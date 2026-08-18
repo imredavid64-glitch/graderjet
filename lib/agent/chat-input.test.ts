@@ -35,7 +35,7 @@ test("accepts a valid UI-message payload (as sent by useChat)", () => {
       },
     ],
   });
-  assert.equal(r.ok, true);
+  assert.ok(r.ok);
   assert.ok(Array.isArray(r.messages));
 });
 
@@ -43,32 +43,32 @@ test("rejects OpenAI chat-completions shape (content instead of parts)", () => {
   const r = parseChatMessages({
     messages: [{ role: "user", content: "grade this" }],
   });
-  assert.equal(r.ok, false);
+  assert.ok(!r.ok);
   assert.match(r.error ?? "", /parts/);
 });
 
 test("rejects a missing messages array", () => {
   const r = parseChatMessages({ foo: 1 });
-  assert.equal(r.ok, false);
+  assert.ok(!r.ok);
   assert.match(r.error ?? "", /messages/);
 });
 
 test("rejects a non-object body (e.g. invalid JSON -> null)", () => {
-  assert.equal(parseChatMessages(null).ok, false);
-  assert.equal(parseChatMessages("nope").ok, false);
-  assert.equal(parseChatMessages(undefined).ok, false);
+  assert.ok(!parseChatMessages(null).ok);
+  assert.ok(!parseChatMessages("nope").ok);
+  assert.ok(!parseChatMessages(undefined).ok);
 });
 
 test("rejects an empty messages array", () => {
   const r = parseChatMessages({ messages: [] });
-  assert.equal(r.ok, false);
+  assert.ok(!r.ok);
 });
 
 test("rejects a message with an unknown role", () => {
   const r = parseChatMessages({
     messages: [{ id: "m1", role: "bot", parts: [{ type: "text", text: "hi" }] }],
   });
-  assert.equal(r.ok, false);
+  assert.ok(!r.ok);
   assert.match(r.error ?? "", /role/);
 });
 
@@ -76,7 +76,7 @@ test("rejects a message with a malformed part", () => {
   const r = parseChatMessages({
     messages: [{ id: "m1", role: "user", parts: [{ type: "text" }] }],
   });
-  assert.equal(r.ok, false);
+  assert.ok(!r.ok);
   assert.match(r.error ?? "", /\.text/);
 });
 
@@ -90,7 +90,7 @@ test("rejects a tool-input part missing its input object", () => {
       },
     ],
   });
-  assert.equal(r.ok, false);
+  assert.ok(!r.ok);
   assert.match(r.error ?? "", /tool-input/);
 });
 
@@ -100,6 +100,6 @@ test("rejects an unsupported part type", () => {
       { id: "m1", role: "user", parts: [{ type: "mystery", text: "hi" }] },
     ],
   });
-  assert.equal(r.ok, false);
+  assert.ok(!r.ok);
   assert.match(r.error ?? "", /not supported/);
 });

@@ -21,11 +21,9 @@ const PART_TYPES = new Set([
   "image",
 ]);
 
-export interface ChatMessagesResult {
-  ok: boolean;
-  messages?: UIMessage[];
-  error?: string;
-}
+export type ChatMessagesResult =
+  | { ok: true; messages: UIMessage[] }
+  | { ok: false; error: string };
 
 export function parseChatMessages(body: unknown): ChatMessagesResult {
   if (typeof body !== "object" || body === null) {
@@ -56,7 +54,7 @@ export function parseChatMessages(body: unknown): ChatMessagesResult {
     if (typeof role !== "string" || !ROLES.has(role)) {
       return {
         ok: false,
-        error: `messages[${i}].role must be one of: ${[...ROLES].join(", ")}.`,
+        error: `messages[${i}].role must be one of: ${Array.from(ROLES).join(", ")}.`,
       };
     }
 
