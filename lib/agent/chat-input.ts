@@ -12,14 +12,28 @@ import type { UIMessage } from "ai";
  */
 
 const ROLES = new Set(["system", "user", "assistant", "data"]);
+
+// All UIMessage part types the AI SDK client can send (ai@7 UIMessagePart),
+// including "step-start" boundaries that appear on resubmitted messages after
+// a tool round. Dynamic data parts use a "data-<name>" prefix, matched below.
 const PART_TYPES = new Set([
   "text",
-  "tool-input",
-  "tool-output",
   "reasoning",
   "file",
   "image",
+  "custom",
+  "source-url",
+  "source-document",
+  "reasoning-file",
+  "step-start",
+  "tool-input",
+  "tool-output",
+  "dynamic-tool",
 ]);
+
+function isSupportedPartType(type: string): boolean {
+  return PART_TYPES.has(type) || type.startsWith("data-");
+}
 
 export type ChatMessagesResult =
   | { ok: true; messages: UIMessage[] }
@@ -77,7 +91,7 @@ export function parseChatMessages(body: unknown): ChatMessagesResult {
           error: `messages[${i}].parts[${j}] must be an object with a string "type".`,
         };
       }
-      if (!PART_TYPES.has(p.type)) {
+      if (!isSupportedPartType(p.type)) {
         return {
           ok: false,
           error: `messages[${i}].parts[${j}].type "${p.type}" is not supported.`,

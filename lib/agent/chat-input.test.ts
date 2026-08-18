@@ -94,6 +94,48 @@ test("rejects a tool-input part missing its input object", () => {
   assert.match(r.error ?? "", /tool-input/);
 });
 
+test("accepts a resubmitted message with step-start parts (post tool round)", () => {
+  // The AI SDK client re-submits the conversation after executing tool calls,
+  // and those messages include "step-start" boundary parts. Rejecting them
+  // broke the agent's acknowledgment round — this is the regression guard.
+  const r = parseChatMessages({
+    messages: [
+      { id: "m1", role: "user", parts: [{ type: "text", text: "Raise Thesis to 20." }] },
+      {
+        id: "m2",
+        role: "assistant",
+        parts: [
+          { type: "step-start" },
+          { type: "text", text: "Applying now…" },
+          {
+            type: "tool-input",
+            toolCallId: "call-1",
+            input: { category: "Thesis", new_score: 20, reasoning: "Good thesis." },
+          },
+        ],
+      },
+      {
+        id: "m3",
+        role: "user",
+        parts: [
+          { type: "step-start" },
+          { type: "tool-output", toolCallId: "call-1", output: { ok: true } },
+        ],
+      },
+    ],
+  });
+  assert.ok(r.ok);
+});
+
+test("accepts data-* dynamic part types", () => {
+  const r = parseChatMessages({
+    messages: [
+      { id: "m1", role: "user", parts: [{ type: "data-example", data: {} }] },
+    ],
+  });
+  assert.ok(r.ok);
+});
+
 test("rejects an unsupported part type", () => {
   const r = parseChatMessages({
     messages: [
