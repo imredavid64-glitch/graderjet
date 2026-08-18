@@ -6,7 +6,6 @@ import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithToolCalls,
 } from "ai";
-import { SUBMISSIONS } from "@/lib/mock-data";
 import { clamp, kindFromReason, normalizeCategory } from "@/lib/grading";
 import type { ActivityEntry, Highlight, Submission } from "@/lib/types";
 
@@ -16,9 +15,12 @@ function uid(prefix: string): string {
   return `${prefix}-${counter}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-export function useGradingWorkspace() {
-  const [submissions, setSubmissions] = useState<Submission[]>(SUBMISSIONS);
-  const [currentId, setCurrentId] = useState<string>(SUBMISSIONS[0].id);
+export function useGradingWorkspace(initialSubmissions: Submission[] = []) {
+  const [submissions, setSubmissions] =
+    useState<Submission[]>(initialSubmissions);
+  const [currentId, setCurrentId] = useState<string>(
+    initialSubmissions[0]?.id ?? "",
+  );
   const [batchCurve, setBatchCurve] = useState(0);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
 

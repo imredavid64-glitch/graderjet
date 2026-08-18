@@ -32,15 +32,33 @@ const MOCK_FRAGMENTS = [
   "Sure — here's the passage behind that flag",
 ];
 
-await page.goto(BASE, { waitUntil: "networkidle" });
-await page.waitForSelector("text=Agent Dialogue");
+const SAMPLE_ESSAY =
+  "Technology has changed education in profound ways. Students now learn " +
+  "through screens and interactive tools, and this shift has both benefits " +
+  "and drawbacks that deserve careful attention. The classroom of the future " +
+  "will need to balance digital fluency with the human connections that make " +
+  "learning meaningful.";
 
-check("brand renders", (await page.locator("text=GraderJet").count()) > 0);
-check("document viewer shows student", (await page.locator("text=Alex Rivera").count()) > 0);
-check("opening agent message present", (await page.locator("text=applied an initial assessment").count()) > 0);
+// ---------- Landing page ----------
+await page.goto(BASE, { waitUntil: "networkidle" });
+await page.waitForSelector("text=Start grading", { timeout: 20000 });
+
+check("landing page renders brand", (await page.locator("text=GraderJet").count()) > 0);
+check("landing CTA to setup visible", (await page.locator("text=Start grading").count()) > 0);
+check("landing sample option visible", (await page.locator("text=Try the sample").count()) > 0);
 
 if (REAL_MODEL) {
-  // --- Real-model flow (deployed site with OPENROUTER_API_KEY etc.) ---
+  // ---------- Real-model flow: setup form -> workspace ----------
+  await page.locator("text=Start grading").first().click();
+  await page.waitForSelector("#student-name", { timeout: 20000 });
+  await page.fill("#student-name", "Smoke Student");
+  await page.fill("#essay-text", SAMPLE_ESSAY);
+  await page.locator("button:has-text('Start grading')").click();
+
+  await page.waitForSelector("text=Agent Dialogue", { timeout: 30000 });
+  check("workspace opens with custom student", (await page.locator("text=Smoke Student").count()) > 0);
+  check("opening agent message present", (await page.locator("text=applied an initial assessment").count()) > 0);
+
   // Replies are non-deterministic, so assert on behavior rather than script:
   // a streamed reply that is not the mock script, and no fail-loud banners.
   await page.locator("text=Raise Thesis to 20 and explain why").click();
@@ -73,7 +91,12 @@ if (REAL_MODEL) {
       (toolCards ? "" : " (model chose not to call a tool)"),
   );
 } else {
-  // --- Mock flow (deterministic scripted agent, local server) ---
+  // ---------- Mock flow: sample essay -> workspace ----------
+  await page.locator("text=Try the sample").first().click();
+  await page.waitForSelector("text=Agent Dialogue", { timeout: 20000 });
+
+  check("document viewer shows student", (await page.locator("text=Alex Rivera").count()) > 0);
+  check("opening agent message present", (await page.locator("text=applied an initial assessment").count()) > 0);
 
   // Interaction 1: raise thesis via suggested prompt
   await page.locator("text=Raise Thesis to 20 and explain why").click();
@@ -107,6 +130,17 @@ if (REAL_MODEL) {
   check("chat renders apply_batch_curve tool card", true);
   await page.waitForSelector("text=+2 curve", { timeout: 15000 });
   check("top nav shows +2 curve badge", true);
+
+  // ---------- Setup form -> custom session ----------
+  await page.goto(BASE + "/setup", { waitUntil: "networkidle" });
+  await page.waitForSelector("#student-name", { timeout: 15000 });
+  await page.fill("#student-name", "Jordan Lee");
+  await page.fill("#essay-text", SAMPLE_ESSAY);
+  await page.locator("button:has-text('Start grading')").click();
+
+  await page.waitForSelector("text=Agent Dialogue", { timeout: 20000 });
+  check("setup form opens workspace with custom student", (await page.locator("text=Jordan Lee").count()) > 0);
+  check("custom session shows opening message", (await page.locator("text=applied an initial assessment").count()) > 0);
 }
 
 if (errors.length) {

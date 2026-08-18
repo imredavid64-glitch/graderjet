@@ -76,10 +76,13 @@ the browser and drive UI state directly.
 ```
 app/
   api/chat/route.ts     # streaming agent route (real model or mock)
-  page.tsx              # workspace composition
+  page.tsx              # landing page
+  setup/page.tsx        # setup flow: student, essay, rubric -> session
+  workspace/page.tsx    # grading workspace (loads the session)
 components/             # top-nav, document-viewer, workbench, agent-dialogue,
                         # scorecard, activity-feed, tool-card, ui/*
 hooks/use-grading-workspace.ts  # chat -> UI state wiring
+lib/session.ts          # grading session store (localStorage) + submission builder
 lib/agent/tools.ts      # grading tools (update_scores, highlight_passage, curve)
 lib/agent/api-key.ts    # provider-aware API key guard (fail loud on bad keys)
 lib/agent/chat-input.ts # chat request-body validation (clear 400 on bad input)
@@ -92,6 +95,10 @@ docs/DEPLOYMENT.md      # Vercel deployment runbook
 .github/workflows/nightly-smoke.yml # nightly real-model smoke test vs production
 ```
 
+The app has three routes: **`/`** (landing page), **`/setup`** (enter the
+student, essay, and prompt — or load the sample), and **`/workspace`** (the
+grading workspace for the current session).
+
 ## Verification
 
 ```bash
@@ -100,7 +107,9 @@ PORT=3100 npm start &   # in one terminal
 node scripts/verify-flow.mjs   # expects http://localhost:3100
 ```
 
-The smoke test asserts the **mock agent's** scripted behavior, so run it with
+The smoke test walks the full user journey — landing page, then either the
+sample essay (mock mode) or the setup form (both modes) into the workspace. In
+mock mode it asserts the **mock agent's** scripted behavior, so run it with
 `OPENROUTER_API_KEY`/`OPENAI_API_KEY` unset (otherwise the real model replies
 won't match the expected script). For the live flow, target production with
 `REAL_MODEL=1`:

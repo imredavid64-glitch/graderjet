@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
   Copy,
   Download,
+  Plus,
   Sparkles,
   TrendingUp,
 } from "lucide-react";
@@ -108,7 +110,7 @@ export function TopNav({
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-card/60 px-4 backdrop-blur">
       {/* Brand */}
-      <div className="flex items-center gap-2.5">
+      <Link href="/" className="flex items-center gap-2.5">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 shadow">
           <Sparkles className="h-4 w-4 text-white" />
         </div>
@@ -128,7 +130,7 @@ export function TopNav({
             Grading workspace
           </span>
         </div>
-      </div>
+      </Link>
 
       <div className="mx-2 hidden h-6 w-px bg-border sm:block" />
 
@@ -202,6 +204,13 @@ export function TopNav({
             {batchCurve} curve
           </Badge>
         )}
+
+        <Button asChild variant="ghost" size="sm" className="h-8">
+          <Link href="/setup">
+            <Plus className="h-3.5 w-3.5" />
+            New paper
+          </Link>
+        </Button>
 
         <Button
           size="sm"
