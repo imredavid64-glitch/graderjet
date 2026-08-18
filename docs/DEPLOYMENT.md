@@ -52,7 +52,8 @@ identically.
 
 ### CI & branch protection
 
-- **GitHub Actions** (`.github/workflows/ci.yml`) runs `npm run typecheck` and
+- **GitHub Actions** (`.github/workflows/ci.yml`) runs `npm run typecheck`,
+  `npm test` (unit tests via Node's built-in runner, no extra deps), and
   `npm run build` on every pull request (Node 24, npm cache).
 - **`.github/workflows/nightly-smoke.yml`** runs the real-model smoke test
   against production every day at 03:00 UTC (and on manual `workflow_dispatch`)

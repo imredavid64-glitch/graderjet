@@ -82,12 +82,14 @@ components/             # top-nav, document-viewer, workbench, agent-dialogue,
 hooks/use-grading-workspace.ts  # chat -> UI state wiring
 lib/agent/tools.ts      # grading tools (update_scores, highlight_passage, curve)
 lib/agent/api-key.ts    # provider-aware API key guard (fail loud on bad keys)
+lib/agent/chat-input.ts # chat request-body validation (clear 400 on bad input)
 lib/agent/mock-model.ts # offline mock grading agent (scripted stream + tool calls)
 lib/                    # types, mock data, grading helpers
-scripts/verify-flow.mjs # Playwright end-to-end smoke test
+scripts/verify-flow.mjs # Playwright end-to-end smoke test (mock or REAL_MODEL mode)
 vercel.json             # pins the Vercel framework preset to Next.js
 docs/DEPLOYMENT.md      # Vercel deployment runbook
-.github/workflows/ci.yml # PR checks: typecheck + next build
+.github/workflows/ci.yml # PR checks: typecheck + tests + next build
+.github/workflows/nightly-smoke.yml # nightly real-model smoke test vs production
 ```
 
 ## Verification
@@ -100,4 +102,9 @@ node scripts/verify-flow.mjs   # expects http://localhost:3100
 
 The smoke test asserts the **mock agent's** scripted behavior, so run it with
 `OPENROUTER_API_KEY`/`OPENAI_API_KEY` unset (otherwise the real model replies
-won't match the expected script).
+won't match the expected script). For the live flow, target production with
+`REAL_MODEL=1`:
+
+```bash
+BASE_URL=https://graderjet.vercel.app REAL_MODEL=1 node scripts/verify-flow.mjs
+```
