@@ -36,6 +36,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Test
+        run: npm test
+
       - name: Build
         # next/font/google fetches font CSS from fonts.googleapis.com during
         # the build; if that request is briefly rate-limited, re-run the job.

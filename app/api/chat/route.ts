@@ -3,11 +3,11 @@ import {
   createUIMessageStreamResponse,
   streamText,
   toUIMessageStream,
-  type UIMessage,
 } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { openrouter } from "@openrouter/ai-sdk-provider";
 import { checkApiKey, resolveApiKeyProvider } from "@/lib/agent/api-key";
+import { parseChatMessages } from "@/lib/agent/chat-input";
 import { gradingTools } from "@/lib/agent/tools";
 import { buildMockScript, createMockModel } from "@/lib/agent/mock-model";
 import { RUBRIC } from "@/lib/mock-data";
@@ -34,7 +34,24 @@ Be concise, specific, and cite the passage or criterion behind every deduction. 
 state, briefly explain the reasoning so the teacher can audit your judgment.`;
 
 export async function POST(req: Request) {
-  const { messages }: { messages: UIMessage[] } = await req.json();
+  // Validate the request body up front: the client sends AI SDK UI-messages
+  // ({ id, role, parts }), and convertToModelMessages crashes with a cryptic
+  // TypeError on any other shape (e.g. OpenAI chat-completions { content }),
+  // so reject malformed payloads with a clear 400 instead of a 500.
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    body = null;
+  }
+  const parsed = parseChatMessages(body);
+  if (!parsed.ok) {
+    return new Response(`Bad request: ${parsed.error}`, {
+      status: 400,
+      headers: { "content-type": "text/plain" },
+    });
+  }
+  const { messages } = parsed;
 
   // The mock agent is used ONLY when no API key is configured. If a key is
   // present it must be valid: fail loudly with a clear message instead of a
