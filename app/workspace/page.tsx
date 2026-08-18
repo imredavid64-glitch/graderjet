@@ -23,8 +23,6 @@ export default function WorkspacePage() {
     setReady(true);
   }, []);
 
-  const ws = useGradingWorkspace(initial);
-
   if (!ready) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -33,7 +31,7 @@ export default function WorkspacePage() {
     );
   }
 
-  if (ws.submissions.length === 0) {
+  if (initial.length === 0) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-background px-4 text-center">
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow">
@@ -60,6 +58,15 @@ export default function WorkspacePage() {
       </div>
     );
   }
+
+  // Mount the workspace (and its hook) only after the session has loaded, so
+  // useGradingWorkspace initializes with the real submission instead of an
+  // empty array from the first render.
+  return <Workspace initial={initial} />;
+}
+
+function Workspace({ initial }: { initial: Submission[] }) {
+  const ws = useGradingWorkspace(initial);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
