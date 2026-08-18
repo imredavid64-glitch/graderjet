@@ -105,7 +105,7 @@ After changing env vars, redeploy for the new values to take effect.
 ## Verifying a deployment
 
 ```bash
-# Homepage responds and renders the workspace shell
+# Homepage responds and renders the landing page
 curl -s https://graderjet.vercel.app/ | grep -o GraderJet | head -1
 
 # Chat route streams an agent reply (real model when a key is configured,
@@ -117,9 +117,16 @@ curl -s -X POST https://graderjet.vercel.app/api/chat \
 
 Expect an `text/x-ndjson` SSE stream starting with `data: {"type":"start"}`.
 
-The full end-to-end UI smoke test (`scripts/verify-flow.mjs`) targets a local
-server (`http://localhost:3100`), not the production URL — run it locally with
-`npm run build && PORT=3100 npm start`.
+The full end-to-end UI smoke test (`scripts/verify-flow.mjs`) walks the user
+journey — landing page → setup (or sample) → workspace — in both modes:
+
+```bash
+# Mock mode (needs API keys unset): against a local server or a preview
+BASE_URL=http://localhost:3100 node scripts/verify-flow.mjs
+
+# Real-model mode against production
+BASE_URL=https://graderjet.vercel.app REAL_MODEL=1 node scripts/verify-flow.mjs
+```
 
 ## Troubleshooting
 
