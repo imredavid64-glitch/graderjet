@@ -132,6 +132,7 @@ export const SUBMISSIONS: Submission[] = [
     ],
     overallNote:
       "A coherent essay that would benefit most from sharper claims and real citations.",
+    teacherNotes: [],
   },
   {
     id: "sub-priya-patel",
@@ -207,6 +208,7 @@ export const SUBMISSIONS: Submission[] = [
     ],
     overallNote:
       "Well-argued with strong analysis; tighten citations and the rebuttal paragraph.",
+    teacherNotes: [],
   },
 ];
 

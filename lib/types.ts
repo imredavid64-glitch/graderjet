@@ -6,6 +6,17 @@ export type HighlightKind =
   | "grammar"
   | "positive";
 
+/** A teacher's free-text annotation on a paragraph or category. */
+export interface TeacherNote {
+  id: string;
+  /** "paragraph" for document-viewer notes, "category" for scorecard notes. */
+  kind: "paragraph" | "category";
+  /** Paragraph index (0-based) or category key. */
+  targetId: string;
+  text: string;
+  createdAt: number;
+}
+
 export interface Highlight {
   id: string;
   startLine: number;
@@ -34,6 +45,8 @@ export interface Submission {
   highlights: Highlight[];
   scores: ScoreCategory[];
   overallNote: string;
+  /** Teacher annotations on paragraphs or categories. */
+  teacherNotes: TeacherNote[];
 }
 
 export interface RubricCategory {
@@ -47,6 +60,27 @@ export interface Rubric {
   id: string;
   name: string;
   categories: RubricCategory[];
+}
+
+/** A student entry in a grading batch. */
+export interface BatchEntry {
+  id: string;
+  studentName: string;
+  title: string;
+  prompt: string;
+  text: string;
+}
+
+/** Summary stats for a single graded paper. */
+export interface PaperSummary {
+  id: string;
+  studentName: string;
+  title: string;
+  totalScore: number;
+  maxScore: number;
+  letterGrade: string;
+  categoryScores: { key: string; label: string; score: number; max: number }[];
+  highlightCount: number;
 }
 
 export type ActivityKind = "score" | "highlight" | "curve" | "agent";

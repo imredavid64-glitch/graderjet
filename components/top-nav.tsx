@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -56,6 +56,13 @@ export function TopNav({
 }: TopNavProps) {
   const [exportOpen, setExportOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Allow keyboard shortcut to open export dialog via custom event
+  useEffect(() => {
+    const handler = () => setExportOpen(true);
+    window.addEventListener("graderjet:export", handler);
+    return () => window.removeEventListener("graderjet:export", handler);
+  }, []);
 
   const index = submissions.findIndex((s) => s.id === currentId);
   const go = (dir: 1 | -1) => {
