@@ -1,4 +1,4 @@
-import type { Rubric, ScoreCategory, Submission } from "./types";
+import type { BatchEntry, Rubric, ScoreCategory, Submission } from "./types";
 import { RUBRIC, SUBMISSIONS } from "./mock-data";
 
 /**
@@ -20,6 +20,10 @@ export interface GradingSession {
    * pre-seeded scores and highlights) instead of building a fresh one.
    */
   sampleId?: "alex-rivera" | "priya-patel";
+  /** Batch entries for multi-student grading. */
+  batch?: BatchEntry[];
+  /** Custom rubric overrides stored by the teacher. */
+  customRubric?: Rubric;
 }
 
 const STORAGE_KEY = "graderjet.session.v1";
@@ -51,17 +55,14 @@ export function clearSession(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
 
-/** Build the workspace submission from a session created in /setup. */
-export function buildSubmissionFromSession(
-  session: GradingSession,
-  rubric: Rubric = RUBRIC,
+/** Build a single submission from a student entry + rubric. */
+export function buildSubmissionFromEntry(
+  entry: BatchEntry,
+  rubric: Rubric,
+  position: number,
+  totalSize: number,
 ): Submission {
-  if (session.sampleId) {
-    const demo = SUBMISSIONS.find((s) => s.id === `sub-${session.sampleId}`);
-    if (demo) return demo;
-  }
-
-  const paragraphs = session.text
+  const paragraphs = entry.text
     .split(/\n{2,}/)
     .map((p) => p.trim())
     .filter(Boolean);
@@ -75,17 +76,59 @@ export function buildSubmissionFromSession(
   }));
 
   return {
-    id: `sub-${session.id}`,
-    studentName: session.studentName,
-    classPosition: 1,
-    classSize: 1,
-    title: session.title.trim() || "Untitled Essay",
-    prompt: session.prompt,
-    paragraphs: paragraphs.length > 0 ? paragraphs : [session.text],
+    id: `sub-${entry.id}`,
+    studentName: entry.studentName,
+    classPosition: position,
+    classSize: totalSize,
+    title: entry.title.trim() || "Untitled Essay",
+    prompt: entry.prompt,
+    paragraphs: paragraphs.length > 0 ? paragraphs : [entry.text],
     highlights: [],
     scores,
     overallNote: "",
+    teacherNotes: [],
   };
+}
+
+/** Build the workspace submissions from a session created in /setup. */
+export function buildSubmissionsFromSession(
+  session: GradingSession,
+  rubric?: Rubric,
+): Submission[] {
+  const effectiveRubric = rubric ?? session.customRubric ?? RUBRIC;
+
+  if (session.sampleId) {
+    const demo = SUBMISSIONS.find((s) => s.id === `sub-${session.sampleId}`);
+    if (demo) return [demo];
+  }
+
+  // If there are batch entries, build a submission for each.
+  if (session.batch && session.batch.length > 0) {
+    return session.batch.map((entry, i) =>
+      buildSubmissionFromEntry(entry, effectiveRubric, i + 1, session.batch!.length),
+    );
+  }
+
+  // Single-student fallback (legacy session shape).
+  const entry: BatchEntry = {
+    id: session.id,
+    studentName: session.studentName,
+    title: session.title,
+    prompt: session.prompt,
+    text: session.text,
+  };
+  return [buildSubmissionFromEntry(entry, effectiveRubric, 1, 1)];
+}
+
+/**
+ * @deprecated Use buildSubmissionsFromSession instead.
+ * Kept for backward compat with existing callers.
+ */
+export function buildSubmissionFromSession(
+  session: GradingSession,
+  rubric?: Rubric,
+): Submission {
+  return buildSubmissionsFromSession(session, rubric)[0];
 }
 
 /** Save one of the built-in demo papers as the current session. */
