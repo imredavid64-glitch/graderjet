@@ -259,9 +259,9 @@ test("computeSummary returns correct averages for single submission", () => {
 });
 
 test("computeSummary sorts by total score descending", () => {
-  const low = [[10, 20], [10, 20], [10, 20], [10, 20], [10, 20]];
-  const high = [[18, 20], [18, 20], [18, 20], [18, 20], [18, 20]];
-  const mid = [[15, 20], [15, 20], [15, 20], [15, 20], [15, 20]];
+  const low: [number, number][] = [[10, 20], [10, 20], [10, 20], [10, 20], [10, 20]];
+  const high: [number, number][] = [[18, 20], [18, 20], [18, 20], [18, 20], [18, 20]];
+  const mid: [number, number][] = [[15, 20], [15, 20], [15, 20], [15, 20], [15, 20]];
   const subs = [
     makeSub("s1", "Low", low, 0),
     makeSub("s2", "High", high, 0),
