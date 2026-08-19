@@ -3,6 +3,8 @@
 import type { Submission } from "@/lib/types";
 import { letterGrade, totalScore } from "@/lib/grading";
 import { cn } from "@/lib/utils";
+import { exportClassSummaryCsv, exportClassSummaryPdf } from "@/lib/export-class-summary";
+import { Download, FileText } from "lucide-react";
 
 function scoreTone(ratio: number) {
   if (ratio >= 0.8) return "text-emerald-400";
@@ -87,8 +89,72 @@ export function ClassSummary({
     return { ...cat, avg };
   });
 
+  const handleExportCsv = () => {
+    exportClassSummaryCsv({
+      className: "Class Summary",
+      rows: results.map((r) => ({
+        studentName: r.submission.studentName,
+        title: r.submission.title,
+        score: r.curved,
+        max: r.max,
+        percent: r.max > 0 ? (r.curved / r.max) * 100 : 0,
+        letterGrade: r.letter,
+        highlightCount: r.submission.highlights.length,
+      })),
+      categoryAverages: categoryAvgs.map((c) => ({
+        label: c.label,
+        avg: c.avg,
+        max: c.max,
+      })),
+      gradeDistribution: gradeEntries,
+      classAvgPercent,
+      avgLetter: letterGrade(classAvgPercent),
+    });
+  };
+
+  const handleExportPdf = () => {
+    exportClassSummaryPdf({
+      className: "Class Summary",
+      rows: results.map((r) => ({
+        studentName: r.submission.studentName,
+        title: r.submission.title,
+        score: r.curved,
+        max: r.max,
+        percent: r.max > 0 ? (r.curved / r.max) * 100 : 0,
+        letterGrade: r.letter,
+        highlightCount: r.submission.highlights.length,
+      })),
+      categoryAverages: categoryAvgs.map((c) => ({
+        label: c.label,
+        avg: c.avg,
+        max: c.max,
+      })),
+      gradeDistribution: gradeEntries,
+      classAvgPercent,
+      avgLetter: letterGrade(classAvgPercent),
+    });
+  };
+
   return (
     <div className="h-full overflow-y-auto px-4 py-4 space-y-5">
+      {/* Export buttons */}
+      <div className="flex items-center justify-end gap-2">
+        <button
+          onClick={handleExportCsv}
+          className="flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <Download className="h-3 w-3" />
+          Export CSV
+        </button>
+        <button
+          onClick={handleExportPdf}
+          className="flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <FileText className="h-3 w-3" />
+          Export PDF
+        </button>
+      </div>
+
       {/* Class overview */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-xl border bg-card p-3 text-center">

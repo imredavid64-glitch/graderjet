@@ -1,0 +1,228 @@
+/**
+ * Export utilities for class summary data — zero dependencies.
+ * CSV is generated client-side and downloaded.
+ * PDF opens a print-friendly HTML page in a new tab (Ctrl/Cmd+P → Save as PDF).
+ */
+
+interface SummaryRow {
+  studentName: string;
+  title: string;
+  score: number;
+  max: number;
+  percent: number;
+  letterGrade: string;
+  highlightCount: number;
+}
+
+interface CategoryAvg {
+  label: string;
+  avg: number;
+  max: number;
+}
+
+interface GradeDistEntry {
+  grade: string;
+  count: number;
+}
+
+// ---------- CSV ----------
+
+function escapeCsv(value: string): string {
+  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+export function exportClassSummaryCsv(opts: {
+  className: string;
+  rows: SummaryRow[];
+  categoryAverages: CategoryAvg[];
+  gradeDistribution: GradeDistEntry[];
+  classAvgPercent: number;
+  avgLetter: string;
+}) {
+  const lines: string[] = [];
+
+  // Header section
+  lines.push("Class Summary");
+  lines.push(`Class Name,${escapeCsv(opts.className)}`);
+  lines.push(`Papers,${opts.rows.length}`);
+  lines.push(`Class Average,${opts.classAvgPercent.toFixed(1)}%`);
+  lines.push(`Average Grade,${opts.avgLetter}`);
+  lines.push("");
+
+  // Paper list
+  lines.push("Student,Title,Score,Max,Percent,Grade,Highlights");
+  for (const r of opts.rows) {
+    lines.push(
+      [
+        escapeCsv(r.studentName),
+        escapeCsv(r.title),
+        r.score,
+        r.max,
+        `${r.percent.toFixed(1)}%`,
+        r.letterGrade,
+        r.highlightCount,
+      ].join(","),
+    );
+  }
+  lines.push("");
+
+  // Category averages
+  lines.push("Category Average");
+  lines.push("Category,Average,Max");
+  for (const cat of opts.categoryAverages) {
+    lines.push(`${escapeCsv(cat.label)},${cat.avg.toFixed(1)},${cat.max}`);
+  }
+  lines.push("");
+
+  // Grade distribution
+  lines.push("Grade Distribution");
+  lines.push("Grade,Count");
+  for (const g of opts.gradeDistribution) {
+    lines.push(`${g.grade},${g.count}`);
+  }
+
+  const csv = lines.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `class-summary-${opts.className.replace(/\s+/g, "-").toLowerCase()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ---------- PDF (print-friendly HTML) ----------
+
+function escHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+export function exportClassSummaryPdf(opts: {
+  className: string;
+  rows: SummaryRow[];
+  categoryAverages: CategoryAvg[];
+  gradeDistribution: GradeDistEntry[];
+  classAvgPercent: number;
+  avgLetter: string;
+}) {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Class Summary — ${escHtml(opts.className)}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; padding: 32px; font-size: 13px; line-height: 1.5; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: #666; font-size: 13px; margin-bottom: 24px; }
+  .overview { display: flex; gap: 16px; margin-bottom: 24px; }
+  .overview-card { flex: 1; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 16px; text-align: center; }
+  .overview-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #999; }
+  .overview-value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+  h2 { font-size: 14px; font-weight: 600; margin: 20px 0 8px; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #999; font-weight: 600; padding: 6px 8px; border-bottom: 2px solid #e0e0e0; }
+  td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; font-size: 12px; }
+  tr:last-child td { border-bottom: none; }
+  .text-right { text-align: right; }
+  .grade-A { color: #16a34a; font-weight: 600; }
+  .grade-B { color: #2563eb; font-weight: 600; }
+  .grade-C { color: #ea580c; font-weight: 600; }
+  .grade-D, .grade-F { color: #dc2626; font-weight: 600; }
+  .bar-bg { background: #f0f0f0; border-radius: 3px; height: 14px; width: 100%; }
+  .bar-fill { height: 14px; border-radius: 3px; }
+  .footer { margin-top: 32px; font-size: 10px; color: #aaa; text-align: center; }
+  @media print {
+    body { padding: 16px; }
+    .no-print { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="no-print" style="margin-bottom:16px;text-align:center;font-size:11px;color:#999;">
+  Press <strong>Ctrl+P</strong> / <strong>Cmd+P</strong> → Save as PDF
+</div>
+
+<h1>${escHtml(opts.className)}</h1>
+<p class="subtitle">Class Summary · ${opts.rows.length} papers · Generated by GraderJet</p>
+
+<div class="overview">
+  <div class="overview-card">
+    <div class="overview-label">Papers</div>
+    <div class="overview-value">${opts.rows.length}</div>
+  </div>
+  <div class="overview-card">
+    <div class="overview-label">Class Average</div>
+    <div class="overview-value">${opts.classAvgPercent.toFixed(1)}%</div>
+  </div>
+  <div class="overview-card">
+    <div class="overview-label">Average Grade</div>
+    <div class="overview-value">${escHtml(opts.avgLetter)}</div>
+  </div>
+</div>
+
+<h2>Grade Distribution</h2>
+<table>
+  <thead><tr><th>Grade</th><th>Count</th><th style="width:50%">Distribution</th></tr></thead>
+  <tbody>
+    ${opts.gradeDistribution
+      .map((g) => {
+        const maxC = Math.max(...opts.gradeDistribution.map((x) => x.count), 1);
+        const pct = (g.count / maxC) * 100;
+        const gc = g.grade.startsWith("A") ? "A" : g.grade.startsWith("B") ? "B" : g.grade.startsWith("C") ? "C" : "D";
+        return `<tr>
+          <td class="grade-${gc}">${escHtml(g.grade)}</td>
+          <td>${g.count}</td>
+          <td><div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${gc === "A" ? "#22c55e" : gc === "B" ? "#3b82f6" : gc === "C" ? "#f97316" : "#ef4444"};"></div></div></td>
+        </tr>`;
+      })
+      .join("\n")}
+  </tbody>
+</table>
+
+<h2>Category Averages</h2>
+<table>
+  <thead><tr><th>Category</th><th class="text-right">Average</th><th class="text-right">Max</th></tr></thead>
+  <tbody>
+    ${opts.categoryAverages
+      .map((c) => `<tr><td>${escHtml(c.label)}</td><td class="text-right">${c.avg.toFixed(1)}</td><td class="text-right">${c.max}</td></tr>`)
+      .join("\n")}
+  </tbody>
+</table>
+
+<h2>All Papers</h2>
+<table>
+  <thead><tr><th>Student</th><th>Title</th><th class="text-right">Score</th><th class="text-right">%</th><th class="text-right">Grade</th></tr></thead>
+  <tbody>
+    ${opts.rows
+      .map((r) => {
+        const gc = r.letterGrade.startsWith("A") ? "A" : r.letterGrade.startsWith("B") ? "B" : r.letterGrade.startsWith("C") ? "C" : "D";
+        return `<tr>
+          <td>${escHtml(r.studentName)}</td>
+          <td>${escHtml(r.title)}</td>
+          <td class="text-right">${r.score}/${r.max}</td>
+          <td class="text-right">${r.percent.toFixed(1)}%</td>
+          <td class="text-right grade-${gc}">${escHtml(r.letterGrade)}</td>
+        </tr>`;
+      })
+      .join("\n")}
+  </tbody>
+</table>
+
+<div class="footer">Generated by GraderJet · ${new Date().toLocaleDateString()}</div>
+</body>
+</html>`;
+
+  const win = window.open("", "_blank");
+  if (win) {
+    win.document.write(html);
+    win.document.close();
+  }
+}
