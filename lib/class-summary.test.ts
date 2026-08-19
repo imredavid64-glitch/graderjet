@@ -69,7 +69,7 @@ function computeSummary(submissions: Submission[], batchCurve: number) {
       title: s.title,
       totalScore: totals.curved,
       maxScore: totals.max,
-      letterGrade: letterGrade(totals.curved),
+      letterGrade: letterGrade(totals.max > 0 ? (totals.curved / totals.max) * 100 : 0),
       highlightCount: s.highlights.length,
     };
   });

@@ -25,6 +25,13 @@ interface WorkbenchProps {
     stop: () => void;
   };
   onScoreChange: (key: string, value: number) => void;
+  onAddTeacherNote?: (
+    subId: string,
+    kind: "paragraph" | "category",
+    targetId: string,
+    text: string,
+  ) => void;
+  onRemoveTeacherNote?: (subId: string, noteId: string) => void;
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
@@ -40,6 +47,8 @@ export function Workbench({
   onSelect,
   chat,
   onScoreChange,
+  onAddTeacherNote,
+  onRemoveTeacherNote,
   canUndo,
   canRedo,
   onUndo,
@@ -119,6 +128,8 @@ export function Workbench({
               submission={submission}
               batchCurve={batchCurve}
               onScoreChange={onScoreChange}
+              onAddTeacherNote={onAddTeacherNote}
+              onRemoveTeacherNote={onRemoveTeacherNote}
             />
           </TabsContent>
 

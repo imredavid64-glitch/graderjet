@@ -7,7 +7,7 @@ import {
   lastAssistantMessageIsCompleteWithToolCalls,
 } from "ai";
 import { clamp, kindFromReason, normalizeCategory } from "@/lib/grading";
-import type { ActivityEntry, Highlight, Submission, TeacherNote } from "@/lib/types";
+import type { ActivityEntry, Highlight, RubricCategory, Submission, TeacherNote } from "@/lib/types";
 
 let counter = 0;
 function uid(prefix: string): string {
@@ -23,7 +23,7 @@ interface StateSnapshot {
 
 const MAX_HISTORY = 50;
 
-export function useGradingWorkspace(initialSubmissions: Submission[] = []) {
+export function useGradingWorkspace(initialSubmissions: Submission[] = [], rubricCategories?: RubricCategory[]) {
   const [submissions, setSubmissions] =
     useState<Submission[]>(initialSubmissions);
   const [currentId, setCurrentId] = useState<string>(
@@ -32,9 +32,12 @@ export function useGradingWorkspace(initialSubmissions: Submission[] = []) {
   const [batchCurve, setBatchCurve] = useState(0);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
 
-  // Undo / redo stacks (refs — no re-renders on push/pop).
-  const undoStack = useRef<StateSnapshot[]>([]);
-  const redoStack = useRef<StateSnapshot[]>([]);
+  // Undo / redo stacks. We use state (not refs) for stack-length tracking
+  // so canUndo / canRedo trigger re-renders when the stacks change.
+  const undoStackRef = useRef<StateSnapshot[]>([]);
+  const redoStackRef = useRef<StateSnapshot[]>([]);
+  const [undoLen, setUndoLen] = useState(0);
+  const [redoLen, setRedoLen] = useState(0);
 
   // Keep the current student id readable from inside the (long-lived) chat
   // tool-call callback without stale closures.
@@ -48,26 +51,30 @@ export function useGradingWorkspace(initialSubmissions: Submission[] = []) {
   /** Push current state onto the undo stack (clears redo). */
   const pushUndo = useCallback(
     (subs: Submission[], curve: number) => {
-      undoStack.current.push({
+      undoStackRef.current.push({
         submissions: subs,
         batchCurve: curve,
       });
-      if (undoStack.current.length > MAX_HISTORY) undoStack.current.shift();
-      redoStack.current = [];
+      if (undoStackRef.current.length > MAX_HISTORY) undoStackRef.current.shift();
+      redoStackRef.current = [];
+      setUndoLen(undoStackRef.current.length);
+      setRedoLen(0);
     },
     [],
   );
 
   const undo = useCallback(() => {
-    const prev = undoStack.current.pop();
+    const prev = undoStackRef.current.pop();
     if (!prev) return;
     // Save current state onto redo stack.
-    redoStack.current.push({
+    redoStackRef.current.push({
       submissions: submissions,
       batchCurve: batchCurve,
     });
     setSubmissions(prev.submissions);
     setBatchCurve(prev.batchCurve);
+    setUndoLen(undoStackRef.current.length);
+    setRedoLen(redoStackRef.current.length);
     setActivity((a) =>
       [
         { id: uid("act"), at: new Date(), kind: "score" as const, title: "Undo", detail: "Reverted last change" },
@@ -77,14 +84,16 @@ export function useGradingWorkspace(initialSubmissions: Submission[] = []) {
   }, [submissions, batchCurve]);
 
   const redo = useCallback(() => {
-    const next = redoStack.current.pop();
+    const next = redoStackRef.current.pop();
     if (!next) return;
-    undoStack.current.push({
+    undoStackRef.current.push({
       submissions: submissions,
       batchCurve: batchCurve,
     });
     setSubmissions(next.submissions);
     setBatchCurve(next.batchCurve);
+    setUndoLen(undoStackRef.current.length);
+    setRedoLen(redoStackRef.current.length);
     setActivity((a) =>
       [
         { id: uid("act"), at: new Date(), kind: "score" as const, title: "Redo", detail: "Reapplied last change" },
@@ -93,8 +102,8 @@ export function useGradingWorkspace(initialSubmissions: Submission[] = []) {
     );
   }, [submissions, batchCurve]);
 
-  const canUndo = undoStack.current.length > 0;
-  const canRedo = redoStack.current.length > 0;
+  const canUndo = undoLen > 0;
+  const canRedo = redoLen > 0;
 
   // ---- logging ----
 
@@ -186,7 +195,10 @@ export function useGradingWorkspace(initialSubmissions: Submission[] = []) {
 
   const { messages, sendMessage, addToolOutput, status, error, stop } =
     useChat({
-      transport: new DefaultChatTransport({ api: "/api/chat" }),
+      transport: new DefaultChatTransport({
+        api: "/api/chat",
+        body: () => ({ rubricCategories: rubricCategories ?? undefined }),
+      }),
       sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
       async onToolCall({ toolCall }) {
         if (toolCall.dynamic) return;

@@ -53,6 +53,33 @@ export async function POST(req: Request) {
   }
   const { messages } = parsed;
 
+  // The client may send custom rubric categories in the body.
+  const bodyData = body as Record<string, unknown> | null;
+  const rubricCategories = bodyData?.rubricCategories as
+    | { key: string; label: string; max: number; description: string }[]
+    | undefined;
+
+  // Build the system prompt, using custom rubric categories if provided.
+  const categories = rubricCategories ?? RUBRIC.categories;
+  const systemPrompt = `You are the GraderJet grading agent — an expert writing instructor and
+scoring assistant working alongside a human teacher in a human-in-the-loop workspace.
+
+The teacher grades papers with you. You provide an initial assessment, then the teacher can
+interrogate your reasoning, request score changes, and adjust feedback interactively.
+
+Available rubric categories:
+${categories
+  .map((c) => `- ${c.label} (0–${c.max}): ${c.description}`)
+  .join("\n")}
+
+Use your tools to make the workspace reflect decisions in real time:
+- update_scores: change a rubric category score on the live scorecard.
+- highlight_passage: flag a passage in the student document.
+- apply_batch_curve: shift the grading scale for the whole batch.
+
+Be concise, specific, and cite the passage or criterion behind every deduction. When you change
+state, briefly explain the reasoning so the teacher can audit your judgment.`;
+
   // The mock agent is used ONLY when no API key is configured. If a key is
   // present it must be valid: fail loudly with a clear message instead of a
   // cryptic mid-stream 401 (or silently serving the mock while configured for
@@ -79,7 +106,7 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model,
-    system: SYSTEM_PROMPT,
+    system: systemPrompt,
     messages: await convertToModelMessages(messages),
     tools: gradingTools,
     // Cap output tokens: grading replies are short, and a hard cap also keeps

@@ -41,7 +41,8 @@ export function ClassSummary({
 
   const results = submissions.map((s) => {
     const totals = totalScore(s.scores, batchCurve);
-    return { submission: s, ...totals, letter: letterGrade(totals.curved) };
+    const pct = totals.max > 0 ? (totals.curved / totals.max) * 100 : 0;
+    return { submission: s, ...totals, letter: letterGrade(pct) };
   });
 
   const totalEarned = results.reduce((sum, r) => sum + r.curved, 0);
@@ -109,7 +110,7 @@ export function ClassSummary({
             Avg grade
           </p>
           <p className="mt-1 text-2xl font-semibold">
-            {letterGrade(classAverage)}
+            {letterGrade(classAvgPercent)}
           </p>
         </div>
       </div>
