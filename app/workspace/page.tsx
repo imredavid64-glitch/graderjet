@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
+import type { UIMessage } from "ai";
 import { useGradingWorkspace } from "@/hooks/use-grading-workspace";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { TopNav } from "@/components/top-nav";
@@ -10,19 +11,34 @@ import { DocumentViewer } from "@/components/document-viewer";
 import { Workbench } from "@/components/workbench";
 import { Button } from "@/components/ui/button";
 import { buildSubmissionsFromSession, loadSession } from "@/lib/session";
+import {
+  loadWorkspaceState,
+  saveWorkspaceState,
+} from "@/lib/session-export";
 import type { RubricCategory, Submission } from "@/lib/types";
 
 export default function WorkspacePage() {
   const [ready, setReady] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [initial, setInitial] = useState<Submission[]>([]);
+  const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
   const [rubricCategories, setRubricCategories] = useState<RubricCategory[] | undefined>();
 
   // The session is stored in localStorage by /setup (client-only), so load it
-  // after mount rather than during SSR.
+  // after mount rather than during SSR. If a saved workspace state exists for
+  // this session, restore the graded submissions and conversation instead of
+  // rebuilding a blank scorecard.
   useEffect(() => {
     const session = loadSession();
     if (session) {
-      setInitial(buildSubmissionsFromSession(session));
+      setSessionId(session.id);
+      const saved = loadWorkspaceState(session.id);
+      setInitial(
+        saved && saved.submissions.length > 0
+          ? saved.submissions
+          : buildSubmissionsFromSession(session),
+      );
+      setInitialMessages(saved?.messages ?? []);
       if (session.customRubric) {
         setRubricCategories(session.customRubric.categories);
       }
@@ -69,11 +85,41 @@ export default function WorkspacePage() {
   // Mount the workspace (and its hook) only after the session has loaded, so
   // useGradingWorkspace initializes with the real submission instead of an
   // empty array from the first render.
-  return <Workspace initial={initial} rubricCategories={rubricCategories} />;
+  return (
+    <Workspace
+      key={sessionId ?? "none"}
+      sessionId={sessionId}
+      initial={initial}
+      initialMessages={initialMessages}
+      rubricCategories={rubricCategories}
+    />
+  );
 }
 
-function Workspace({ initial, rubricCategories }: { initial: Submission[]; rubricCategories?: RubricCategory[] }) {
-  const ws = useGradingWorkspace(initial, rubricCategories);
+function Workspace({
+  sessionId,
+  initial,
+  initialMessages,
+  rubricCategories,
+}: {
+  sessionId: string | null;
+  initial: Submission[];
+  initialMessages: UIMessage[];
+  rubricCategories?: RubricCategory[];
+}) {
+  const ws = useGradingWorkspace(initial, rubricCategories, initialMessages);
+
+  // Persist the workspace state (scores, highlights, notes, curve,
+  // conversation) locally as the teacher works, so a refresh — or a later
+  // visit — restores the graded papers instead of losing them.
+  useEffect(() => {
+    if (!sessionId) return;
+    saveWorkspaceState(sessionId, {
+      submissions: ws.submissions,
+      batchCurve: ws.batchCurve,
+      messages: ws.chat.messages,
+    });
+  }, [sessionId, ws.submissions, ws.batchCurve, ws.chat.messages]);
 
   const goToPaper = (dir: 1 | -1) => {
     const idx = ws.submissions.findIndex((s) => s.id === ws.currentId);
@@ -102,6 +148,7 @@ function Workspace({ initial, rubricCategories }: { initial: Submission[]; rubri
         submissions={ws.submissions}
         currentId={ws.currentId}
         batchCurve={ws.batchCurve}
+        messages={ws.chat.messages}
         onSelect={ws.setCurrentId}
       />
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1.05fr_1fr]">

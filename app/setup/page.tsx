@@ -24,6 +24,10 @@ import {
   saveSession,
   type GradingSession,
 } from "@/lib/session";
+import {
+  parseSessionExport,
+  saveWorkspaceState,
+} from "@/lib/session-export";
 
 const SAMPLE_TEXT = `Social media has completely changed how teenagers see themselves, and this change is mostly bad. Because platforms reward constant self-presentation, adolescents are pushed to build identities that are shaped more by an audience than by their own values, and this leads to anxiety rather than genuine growth.
 
@@ -57,11 +61,13 @@ function emptyEntry(): StudentEntry {
 export default function SetupPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sessionFileRef = useRef<HTMLInputElement>(null);
 
   // Batch state: one or more students.
   const [students, setStudents] = useState<StudentEntry[]>([emptyEntry()]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const [uploadErrors, setUploadErrors] = useState<
     { name: string; error: string }[]
   >([]);
@@ -179,6 +185,25 @@ export default function SetupPage() {
   const trySample = () => {
     saveSampleSession("alex-rivera");
     router.push("/workspace");
+  };
+
+  // --- Open a shared session file ---
+  const openSessionFile = async (file: File) => {
+    try {
+      const text = await file.text();
+      const result = parseSessionExport(text);
+      if (!result.ok) {
+        setImportError(result.error);
+        return;
+      }
+      saveSession(result.data.session);
+      if (result.data.workspace) {
+        saveWorkspaceState(result.data.session.id, result.data.workspace);
+      }
+      router.push("/workspace");
+    } catch {
+      setImportError("Could not read the file — it is not a GraderJet session file.");
+    }
   };
 
   return (
@@ -448,6 +473,13 @@ export default function SetupPage() {
             </p>
           )}
 
+          {/* Import error */}
+          {importError && (
+            <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              {importError}
+            </p>
+          )}
+
           {/* Actions */}
           <div className="flex items-center gap-3 pt-2">
             <Button onClick={start} className="h-10 px-6">
@@ -468,10 +500,31 @@ export default function SetupPage() {
               <BookOpen className="h-4 w-4" />
               Try the sample
             </Button>
+            <Button
+              variant="outline"
+              className="h-10 px-6"
+              onClick={() => sessionFileRef.current?.click()}
+            >
+              <Upload className="h-4 w-4" />
+              Open session file
+            </Button>
+            <input
+              ref={sessionFileRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) openSessionFile(file);
+                e.target.value = "";
+              }}
+            />
           </div>
           <p className="text-xs text-muted-foreground">
             &ldquo;Try the sample&rdquo; opens the workspace with a pre-graded
             demo essay so you can see the full agentic flow instantly.
+            &ldquo;Open session file&rdquo; restores a session shared by
+            another teacher — grades, highlights, notes, and chat included.
           </p>
         </div>
       </main>

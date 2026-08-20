@@ -15,6 +15,8 @@ import {
 import type { Submission } from "@/lib/types";
 import { letterGrade, totalScore } from "@/lib/grading";
 import { RUBRIC } from "@/lib/mock-data";
+import { loadSession } from "@/lib/session";
+import { serializeSessionExport } from "@/lib/session-export";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -44,6 +46,8 @@ interface TopNavProps {
   submissions: Submission[];
   currentId: string;
   batchCurve: number;
+  /** Live agent conversation (AI SDK UI messages) for the shareable session file. */
+  messages?: unknown[];
   onSelect: (id: string) => void;
 }
 
@@ -52,6 +56,7 @@ export function TopNav({
   submissions,
   currentId,
   batchCurve,
+  messages,
   onSelect,
 }: TopNavProps) {
   const [exportOpen, setExportOpen] = useState(false);
@@ -112,6 +117,26 @@ export function TopNav({
     } catch {
       /* clipboard unavailable */
     }
+  };
+
+  // Full shareable session file: inputs + graded workspace state + the agent
+  // conversation. Another teacher can reopen it in GraderJet and pick up
+  // exactly where this session left off.
+  const downloadSessionFile = () => {
+    const session = loadSession();
+    if (!session) return;
+    const json = serializeSessionExport(session, {
+      submissions,
+      batchCurve,
+      messages: messages ?? [],
+    });
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${session.studentName.replace(/\s+/g, "-")}-graderjet-session.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -244,15 +269,36 @@ export function TopNav({
               {JSON.stringify(payload, null, 2)}
             </pre>
           </div>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={copyJson}>
-              <Copy className="h-3.5 w-3.5" />
-              {copied ? "Copied" : "Copy JSON"}
-            </Button>
-            <Button size="sm" onClick={downloadJson}>
-              <Download className="h-3.5 w-3.5" />
-              Download .json
-            </Button>
+          <DialogFooter className="flex-col items-stretch gap-2 sm:flex-col">
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={copyJson} className="flex-1">
+                <Copy className="h-3.5 w-3.5" />
+                {copied ? "Copied" : "Copy JSON"}
+              </Button>
+              <Button size="sm" onClick={downloadJson} className="flex-1">
+                <Download className="h-3.5 w-3.5" />
+                Download .json
+              </Button>
+            </div>
+            <div className="rounded-lg border border-dashed bg-muted/30 p-3">
+              <p className="text-xs font-medium text-foreground">
+                Share with another teacher
+              </p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+                Download the full session — essay, scores, highlights, notes,
+                curve, and chat — as one file. The recipient opens it from the
+                setup page and resumes right where you left off.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={downloadSessionFile}
+                className="mt-2 w-full"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download session file
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
