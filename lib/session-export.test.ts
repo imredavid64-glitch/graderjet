@@ -61,11 +61,8 @@ test("parseSessionExport accepts a valid file and restores session + workspace",
   const json = serializeSessionExport(SESSION, WORKSPACE);
   const result = parseSessionExport(json);
   assert.ok(result.ok, "expected ok");
-  // Narrow workspace via direct check for TypeScript control flow
-  if (!result.data.workspace) {
-    throw new Error("workspace should be present");
-  }
-  const workspace = result.data.workspace;
+  // After verifying ok=true, workspace is present for this test case
+  const workspace = result.data.workspace!;
   assert.equal(result.data.session.id, "abc123");
   assert.equal(result.data.session.studentName, "Maya Chen");
   assert.equal(workspace.submissions[0].paragraphs.length, 3);
