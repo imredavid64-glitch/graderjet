@@ -23,7 +23,10 @@ interface StateSnapshot {
 
 const MAX_HISTORY = 50;
 
-export function useGradingWorkspace(initialSubmissions: Submission[] = [], rubricCategories?: RubricCategory[]) {
+export function useGradingWorkspace(
+  initialSubmissions: Submission[] = [],
+  rubricCategories?: RubricCategory[],
+) {
   const [submissions, setSubmissions] =
     useState<Submission[]>(initialSubmissions);
   const [currentId, setCurrentId] = useState<string>(

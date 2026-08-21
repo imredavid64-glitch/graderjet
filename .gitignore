@@ -35,3 +35,6 @@ yarn-error.log*
 
 # freebuff agent state
 .freebuff/
+
+# Local tooling config (machine-specific)
+opencode.json
