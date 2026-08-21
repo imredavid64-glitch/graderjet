@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
-import type { UIMessage } from "ai";
 import { useGradingWorkspace } from "@/hooks/use-grading-workspace";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { TopNav } from "@/components/top-nav";
@@ -21,12 +20,11 @@ export default function WorkspacePage() {
   const [ready, setReady] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [initial, setInitial] = useState<Submission[]>([]);
-  const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
   const [rubricCategories, setRubricCategories] = useState<RubricCategory[] | undefined>();
 
   // The session is stored in localStorage by /setup (client-only), so load it
   // after mount rather than during SSR. If a saved workspace state exists for
-  // this session, restore the graded submissions and conversation instead of
+  // this session, restore the graded submissions instead of
   // rebuilding a blank scorecard.
   useEffect(() => {
     const session = loadSession();
@@ -38,7 +36,6 @@ export default function WorkspacePage() {
           ? saved.submissions
           : buildSubmissionsFromSession(session),
       );
-      setInitialMessages(saved?.messages ?? []);
       if (session.customRubric) {
         setRubricCategories(session.customRubric.categories);
       }
@@ -90,7 +87,6 @@ export default function WorkspacePage() {
       key={sessionId ?? "none"}
       sessionId={sessionId}
       initial={initial}
-      initialMessages={initialMessages}
       rubricCategories={rubricCategories}
     />
   );
@@ -99,15 +95,13 @@ export default function WorkspacePage() {
 function Workspace({
   sessionId,
   initial,
-  initialMessages,
   rubricCategories,
 }: {
   sessionId: string | null;
   initial: Submission[];
-  initialMessages: UIMessage[];
   rubricCategories?: RubricCategory[];
 }) {
-  const ws = useGradingWorkspace(initial, rubricCategories, initialMessages);
+  const ws = useGradingWorkspace(initial, rubricCategories);
 
   // Persist the workspace state (scores, highlights, notes, curve,
   // conversation) locally as the teacher works, so a refresh — or a later

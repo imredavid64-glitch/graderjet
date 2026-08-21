@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { serializeSessionExport, parseSessionExport } from "./session-export.ts";
 import { RUBRIC } from "./mock-data.ts";
+import type { HighlightKind } from "./types.ts";
 
 const SESSION = {
   id: "abc123",
@@ -24,7 +25,7 @@ const WORKSPACE = {
       prompt: "Analyze how setting shapes character.",
       paragraphs: ["First paragraph.", "Second paragraph.", "Third paragraph."],
       highlights: [
-        { id: "hl-1", startLine: 0, endLine: 0, kind: "weak-thesis", reason: "Unclear claim" },
+        { id: "hl-1", startLine: 0, endLine: 0, kind: "weak-thesis" as HighlightKind, reason: "Unclear claim" },
       ],
       scores: RUBRIC.categories.map((c) => ({
         key: c.key,
@@ -60,7 +61,7 @@ test("parseSessionExport accepts a valid file and restores session + workspace",
   const json = serializeSessionExport(SESSION, WORKSPACE);
   const result = parseSessionExport(json);
   assert.ok(result.ok, "expected ok");
-  if (!result.ok) return;
+  if (!result.ok || !result.data.workspace) return;
   assert.equal(result.data.session.id, "abc123");
   assert.equal(result.data.session.studentName, "Maya Chen");
   assert.equal(result.data.workspace.submissions[0].paragraphs.length, 3);

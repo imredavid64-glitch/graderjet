@@ -78,7 +78,6 @@ export async function POST(req: Request) {
     maxOutputTokens: 1024,
     onError: ({ error }) => {
       console.error("[graderjet] model stream error:", error);
-      return `Grading failed: ${error instanceof Error ? error.message : String(error)}`;
     },
   });
 

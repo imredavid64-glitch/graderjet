@@ -5,7 +5,6 @@ import { useChat } from "@ai-sdk/react";
 import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithToolCalls,
-  type UIMessage,
 } from "ai";
 import { clamp, kindFromReason, normalizeCategory } from "@/lib/grading";
 import type { ActivityEntry, Highlight, RubricCategory, Submission, TeacherNote } from "@/lib/types";
@@ -27,7 +26,6 @@ const MAX_HISTORY = 50;
 export function useGradingWorkspace(
   initialSubmissions: Submission[] = [],
   rubricCategories?: RubricCategory[],
-  initialMessages?: UIMessage[],
 ) {
   const [submissions, setSubmissions] =
     useState<Submission[]>(initialSubmissions);
@@ -200,7 +198,6 @@ export function useGradingWorkspace(
 
   const { messages, sendMessage, addToolOutput, status, error, stop } =
     useChat({
-      initialMessages,
       transport: new DefaultChatTransport({
         api: "/api/chat",
         body: () => ({ rubricCategories: rubricCategories ?? undefined }),
