@@ -61,8 +61,8 @@ test("parseSessionExport accepts a valid file and restores session + workspace",
   const json = serializeSessionExport(SESSION, WORKSPACE);
   const result = parseSessionExport(json);
   assert.ok(result.ok, "expected ok");
-  // After verifying ok=true, workspace is present for this test case
-  const workspace = result.data.workspace!;
+  // Cast through unknown to satisfy TypeScript's strict narrowing on union property
+  const workspace = (result as { ok: true; data: { workspace: typeof WORKSPACE } }).data.workspace;
   assert.equal(result.data.session.id, "abc123");
   assert.equal(result.data.session.studentName, "Maya Chen");
   assert.equal(workspace.submissions[0].paragraphs.length, 3);
