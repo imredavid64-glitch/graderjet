@@ -61,12 +61,14 @@ test("parseSessionExport accepts a valid file and restores session + workspace",
   const json = serializeSessionExport(SESSION, WORKSPACE);
   const result = parseSessionExport(json);
   assert.ok(result.ok, "expected ok");
-  if (!result.ok || !result.data.workspace) return;
+  // Use a local variable for proper narrowing
+  const workspace = result.ok ? result.data.workspace : undefined;
+  if (!workspace) return;
   assert.equal(result.data.session.id, "abc123");
   assert.equal(result.data.session.studentName, "Maya Chen");
-  assert.equal(result.data.workspace.submissions[0].paragraphs.length, 3);
-  assert.equal(result.data.workspace.batchCurve, 3);
-  assert.equal(result.data.workspace.messages[0].role, "user");
+  assert.equal(workspace.submissions[0].paragraphs.length, 3);
+  assert.equal(workspace.batchCurve, 3);
+  assert.equal(workspace.messages[0].role, "user");
 });
 
 test("parseSessionExport rejects non-GraderJet JSON", () => {
