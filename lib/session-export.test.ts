@@ -36,7 +36,7 @@ const WORKSPACE = {
       })),
       overallNote: "",
       teacherNotes: [
-        { id: "note-1", kind: "paragraph", targetId: "1", text: "Nice imagery.", createdAt: 1755700000000 },
+        { id: "note-1", kind: "paragraph" as const, targetId: "1", text: "Nice imagery.", createdAt: 1755700000000 },
       ],
     },
   ],
